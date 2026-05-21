@@ -139,19 +139,20 @@ public class PantallaActividadValores extends JFrame {
                                 new ValidarRespuesta(PantallaActividadValores.this, "¡Has completado el tablero!", 5000);
                                 Timer cierre = new Timer(2000, e -> {
                                     Estadisticas stats = control.getEstadisticas();
-                                    stats.setActividad("Simbolos con Valores");
-                                    
-                                    control.guardarProgreso(stats); 
-                                    
+                                    stats.setActividad("Simbolos con Valores");                                    
+                                    // Guardar estadisticas en archivo compartido
+                                    try {
+                                        GestorEstadisticas.appendEstadistica(stats);
+                                    } catch (Exception ex) {
+                                        System.out.println("Error al guardar estadisticas: " + ex.getMessage());
+                                    }
                                     // 2. Cerrar esta pantalla
-                                    dispose(); 
-                                    
+                                    dispose();                                     
                                     // 3. Hacer visible la principal (si guardaste la referencia)
                                     principal.setVisible(true);
                                 });
                                 cierre.setRepeats(false);
-                                cierre.start();
-                                
+                                cierre.start();                                
                             }                                    
                     }else{                                    
                             new ValidarRespuesta(PantallaActividadValores.this, "Error, intenta de nuevo.", 1000);

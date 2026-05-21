@@ -1,9 +1,5 @@
 //Control
 import java.awt.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,10 +41,10 @@ public class ControlValores{
 
     public boolean verficarRespuesta(int indice, int respuesta) {
         if (respuestasCorrectas[indice] == respuesta) {
-            estadisticas.setAciertos(estadisticas.getAciertos() + 1);
+            estadisticas.registrarAcierto();
             return true;
         } else {
-            estadisticas.setErrores(estadisticas.getErrores() + 1);
+            estadisticas.registrarError();
             return false;
         }
     }
@@ -58,28 +54,6 @@ public class ControlValores{
             int rand = (int) (Math.random() * 9) + 1;
             respuestasCorrectas[i] = rand;
         }
-    }
-
-    public void guardarProgreso(Estadisticas estadisticas) {
-            File archivo = new File("Estadisticas.csv");
-        boolean existe = archivo.exists();
-
-        try (PrintWriter pw = new PrintWriter(new FileWriter(archivo, true))) {
-            // Si el archivo es nuevo, ponemos los encabezados
-            if (!existe) {
-                pw.println("Fecha,Actividad,Aciertos,Errores");
-            }
-            // Insertamos los datos
-            pw.printf("%s,%s,%d,%d%n", 
-                estadisticas.getFecha(), 
-                estadisticas.getActividad(), 
-                estadisticas.getAciertos(), 
-                estadisticas.getErrores());
-                
-        } catch (IOException e) {
-            System.err.println("Error al guardar: " + e.getMessage());
-        }
-
     }
 
     public Video getVideo() {

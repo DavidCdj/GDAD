@@ -1,9 +1,17 @@
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.List;
+import javax.imageio.ImageIO;
+import javax.swing.*;
 
 public class AtencionDivididaControlada extends JFrame {
+    private final Frame principal;
+    private Estadisticas estadisticas;
+    private static final Color BG_MAIN = new Color(179, 226, 255);
+    JLabel visor;
 
     private final Color[] secuencia = {
         Color.RED, 
@@ -15,18 +23,33 @@ public class AtencionDivididaControlada extends JFrame {
     
     private int siguienteColorIndice = 0; // Controla qué color toca en la secuencia global
     private final int FILAS = 8;
-    private final int COLUMNAS = 9;
+    private final int COLUMNAS = 10;
     private final int TOTAL_CIRCULOS = FILAS * COLUMNAS;
 
-    public AtencionDivididaControlada() {
+    public AtencionDivididaControlada( Frame principal) {
+
+        visor = new JLabel(new ImageIcon("recursos/VideoCirculoColores.gif"));
+        
+
+        try {
+            visor.setBounds(0, 0, 700, 800); 
+            add(visor);
+            temporizador.start(); 
+        } catch (Exception e) {
+            System.out.println("No se pudo cargar el GIF: " + e.getMessage());
+        } 
+        
+        estadisticas = new Estadisticas();
+        this.principal = principal;        
         setTitle("Atención Dividida - Modo Estricto");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(Color.WHITE);
+        getContentPane().setBackground(BG_MAIN);
+        
 
         // Encabezado basado en image_dadfb8.png
         JPanel panelTexto = new JPanel(new GridLayout(3, 1));
-        panelTexto.setBackground(Color.WHITE);
+        panelTexto.setBackground(BG_MAIN);
         
         JLabel titulo = new JLabel("ATENCIÓN DIVIDIDA", SwingConstants.CENTER);
         titulo.setFont(new Font("Arial", Font.BOLD, 28));
@@ -36,23 +59,25 @@ public class AtencionDivididaControlada extends JFrame {
         
         panelTexto.add(titulo);
         panelTexto.add(instruccion1);
-        panelTexto.add(instruccion2);
+        panelTexto.add(instruccion2);        
 
         JPanel panelCirculos = new JPanel(new GridLayout(FILAS, COLUMNAS, 10, 10));
-        panelCirculos.setBackground(Color.WHITE);
+        panelCirculos.setBackground(BG_MAIN);
         panelCirculos.setBorder(BorderFactory.createEmptyBorder(20, 40, 40, 40));
 
         // Crear los círculos
         for (int i = 0; i < TOTAL_CIRCULOS; i++) {
             panelCirculos.add(new CirculoBoton(i));
-        }
+        }        
 
         add(panelTexto, BorderLayout.NORTH);
         add(panelCirculos, BorderLayout.CENTER);
 
-        setSize(700, 800);
+        setSize(700, 800);        
         setLocationRelativeTo(null);
+        
     }
+    
 
     private class CirculoBoton extends JPanel {
         private Color colorActual = Color.WHITE;
@@ -62,7 +87,7 @@ public class AtencionDivididaControlada extends JFrame {
         public CirculoBoton(int pos) {
             this.posicion = pos;
             setPreferredSize(new Dimension(50, 50));
-            setBackground(Color.WHITE);
+            setBackground(BG_MAIN);
 
             // Los primeros 5 ya están definidos por la imagen image_dadfb8.png
             if (pos < 5) {
@@ -98,6 +123,7 @@ public class AtencionDivididaControlada extends JFrame {
                         colorActual = secuencia[seleccion];
                         coloreado = true;
                         siguienteColorIndice = (siguienteColorIndice + 1) % 5;
+                        estadisticas.registrarAcierto();
                         repaint();
                     } else {
                         // Error
@@ -105,6 +131,7 @@ public class AtencionDivididaControlada extends JFrame {
                             "¡Error! Ese no es el color que sigue en la secuencia. Intenta de nuevo.", 
                             "Error de Secuencia", 
                             JOptionPane.ERROR_MESSAGE);
+                        estadisticas.registrarError();
                     }
                 }
             }
@@ -125,7 +152,44 @@ public class AtencionDivididaControlada extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new AtencionDivididaControlada().setVisible(true));
+    public  Estadisticas getEstadisticas() {
+        return estadisticas;
     }
+
+    public void setEstadisticas( Estadisticas estadisticas) {
+        this.estadisticas = estadisticas;        
+    }
+
+    private static class ImageInputStreamHelper {
+        static void cargarGif(String rutaGif, List<BufferedImage> frames) throws Exception {
+            try (javax.imageio.stream.ImageInputStream stream = ImageIO.createImageInputStream(new File(rutaGif))) {
+                if (stream == null) {
+                    return;
+                }
+                java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(stream);
+                if (!readers.hasNext()) {
+                    return;
+                }
+                javax.imageio.ImageReader reader = readers.next();
+                try {
+                    reader.setInput(stream);
+                    int total = reader.getNumImages(true);
+                    for (int i = 0; i < total; i++) {
+                        frames.add(reader.read(i));
+                    }
+                } finally {
+                    reader.dispose();
+                }
+            }
+        }
+    }
+    Timer temporizador = new Timer(14000, e -> {    
+    this.remove(visor); 
+    JLabel mensaje = new JLabel(" ", SwingConstants.CENTER);
+    mensaje.setBounds(100, 50, 600, 400);
+    this.add(mensaje); 
+    this.revalidate();
+    this.repaint();        
+    ((Timer)e.getSource()).stop();
+    });
 }

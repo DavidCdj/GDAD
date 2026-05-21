@@ -29,6 +29,15 @@ class Estadisticas {
 
     }
 
+    public void registrarError() {
+        errores++;
+    }
+
+    public void registrarAcierto() {
+        aciertos++;
+    }
+    
+
     public int getErrores() {
         return errores;
     }

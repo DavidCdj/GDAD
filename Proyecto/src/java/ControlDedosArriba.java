@@ -1,26 +1,25 @@
 
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
-public class ControlDedosColores {
+public class ControlDedosArriba {
 
     private JFrame menuPrincipal;
     private Process procesoPython;
-        private Estadisticas estadisticas;
-        private long tiempoInicio;
-    private static final String RESULTADO_PATH = "recursos\\resultado_dedos_colores.txt";
+    private Estadisticas estadisticas;
+    private long tiempoInicio;
+
     // El constructor recibe el menú de Java
-    public ControlDedosColores(JFrame menuPrincipal) {
+    public ControlDedosArriba(JFrame menuPrincipal) {
         this.menuPrincipal = menuPrincipal;
     }
 
     public void iniciarActividad() {
+        System.out.println("Ocultando menú y lanzando Python...");
         tiempoInicio = System.currentTimeMillis();
-        
         // Ocultamos el menú principal para que no estorbe
         if (menuPrincipal != null) {
             menuPrincipal.setVisible(false);
@@ -29,19 +28,35 @@ public class ControlDedosColores {
         // Abrimos Python en un hilo secundario para que Java no se congele
         new Thread(() -> {
             try {
-                new File(RESULTADO_PATH).delete();
+                // Ejecuta tu Python usando tu entorno virtual (.venv)
+                ProcessBuilder pb = new ProcessBuilder(".venv311\\Scripts\\python.exe", "src/python/main/DedosArriba.py"); //este es antes de hacer .exe al de python
                 // En --onedir, el ejecutable queda dentro de la carpeta del mismo nombre.
-                ProcessBuilder pb = new ProcessBuilder(".venv311\\Scripts\\python.exe", "src/python/main/DedosColores.py");
-                //ProcessBuilder pb = new ProcessBuilder("dist\\DedosColores\\DedosColores.exe");
-                pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                //ProcessBuilder pb = new ProcessBuilder("dist\\DedosArriba\\DedosArriba.exe");
+                
+                // Redirige errores para que podamos verlos en la consola de VS Code
+                pb.redirectErrorStream(true);
                 procesoPython = pb.start();
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(procesoPython.getInputStream(), "UTF-8"));
+                String linea;
+
+                // Nos quedamos escuchando todo lo que imprima Python
+                while ((linea = reader.readLine()) != null) {
+                    linea = linea.trim();
+                    System.out.println("[Python LOG]: " + linea);
+                    
+                    if (linea.startsWith("RESULTADO:")) {
+                        System.out.println("Datos finales listos para Excel: " + linea);
+                        procesarResultadoPython(linea);
+                        // Aquí conectarás tu GestorExcel más adelante
+                    }
+                }
+
                 // Espera a que el proceso muera por completo (por ESC o por terminar las rondas)
                 procesoPython.waitFor();
-                procesarResultadoDesdeArchivo();
 
             } catch (Exception e) {
-                // Sin salida en consola
+                e.printStackTrace();
             } finally {
                 // AL FINALIZAR: Despierta el menú principal de vuelta en la pantalla
                 SwingUtilities.invokeLater(() -> {
@@ -55,28 +70,18 @@ public class ControlDedosColores {
         }).start();
     }
 
-    private void procesarResultadoDesdeArchivo() {
+    private void procesarResultadoPython(String linea) {
         try {
-            File archivo = new File(RESULTADO_PATH);
-            if (!archivo.exists()) {
-                return;
-            }
-
-            BufferedReader reader = new BufferedReader(new FileReader(archivo));
-            String linea = reader.readLine();
-            reader.close();
-
-            if (linea == null || !linea.startsWith("RESULTADO:")) {
-                return;
-            }
-
+            // Formato esperado: "RESULTADO:aciertos,errores"
             String[] partes = linea.split(":");
             if (partes.length < 2) {
+                System.out.println("Formato incorrecto de resultado");
                 return;
             }
 
             String[] valores = partes[1].split(",");
             if (valores.length < 2) {
+                System.out.println("Faltan aciertos o errores en resultado");
                 return;
             }
 
@@ -85,14 +90,17 @@ public class ControlDedosColores {
             long tiempoTranscurrido = System.currentTimeMillis() - tiempoInicio;
             String tiempoActividad = formatearTiempo(tiempoTranscurrido);
 
-            this.estadisticas = new Estadisticas("DedosColores", aciertos, errores, "", tiempoActividad);
+            this.estadisticas = new Estadisticas("DedosArriba", aciertos, errores, "", tiempoActividad);
+            System.out.println("Estadísticas capturadas: Aciertos=" + aciertos + ", Errores=" + errores + ", Tiempo=" + tiempoActividad);
             // Guardar en archivo compartido
             try {
                 GestorEstadisticas.appendEstadistica(this.estadisticas);
             } catch (Exception ex) {
+                System.out.println("Error guardando estadisticas: " + ex.getMessage());
             }
-            archivo.delete();
         } catch (Exception e) {
+            System.out.println("Error al procesar resultado de Python: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
